@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard Survei Sepsis</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root {
+  --pink: #E91E8C;
+  --pink-light: #F472B6;
+  --pink-pale: #FDF2F8;
+  --pink-pale2: #FCE7F3;
+  --pink-pale3: #FBD5EC;
+  --white: #FFFFFF;
+  --gray-50: #F9FAFB;
+  --gray-100: #F3F4F6;
+  --gray-200: #E5E7EB;
+  --gray-400: #9CA3AF;
+  --gray-500: #6B7280;
+  --gray-700: #374151;
+  --gray-900: #111827;
+  --green: #10B981;
+  --amber: #F59E0B;
+  --red: #EF4444;
+  --blue: #3B82F6;
+  --shadow-sm: 0 1px 3px rgba(233,30,140,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow: 0 4px 16px rgba(233,30,140,0.08), 0 2px 6px rgba(0,0,0,0.04);
+  --shadow-md: 0 8px 24px rgba(233,30,140,0.12), 0 4px 8px rgba(0,0,0,0.06);
+  --radius: 16px;
+  --radius-sm: 10px;
+  --font: 'Plus Jakarta Sans', sans-serif;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--gray-50);
+  color: var(--gray-900);
+  font-family: var(--font);
+  font-size: 14px;
+  min-height: 100vh;
+}
+
+/* HEADER */
+.header {
+  background: var(--pink);
+  padding: 0 24px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 2px 16px rgba(233,30,140,0.25);
+}
+
+.header-left { display: flex; align-items: center; gap: 12px; }
+
+.logo-wrap {
+  width: 36px; height: 36px;
+  border-radius: 10px;
+  background: white;
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+  flex-shrink: 0;
+}
+.logo-wrap img { width: 100%; height: 100%; object-fit: contain; }
+
+.header-title { font-size: 18px; font-weight: 700; color: white; letter-spacing: -0.3px; }
+.header-sub { font-size: 11px; color: rgba(255,255,255,0.7); margin-top: 1px; }
+
+.sync-btn {
+  display: flex; align-items: center; gap: 6px;
+  background: rgba(255,255,255,0.2);
+  border: 1px solid rgba(255,255,255,0.3);
+  border-radius: 8px;
+  padding: 8px 14px;
+  color: white;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: var(--font);
+  transition: all 0.2s;
+  backdrop-filter: blur(8px);
+}
+.sync-btn:hover { background: rgba(255,255,255,0.3); }
+
+.last-sync { font-size: 11px; color: rgba(255,255,255,0.65); }
+
+/* LOADING */
+.loading {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  min-height: calc(100vh - 64px);
+  gap: 16px;
+  background: var(--pink-pale);
+}
+.spinner {
+  width: 40px; height: 40px;
+  border: 3px solid var(--pink-pale3);
+  border-top-color: var(--pink);
+  border-radius: 50%;
+  animation: spin 0.75s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-text { color: var(--pink); font-size: 13px; font-weight: 500; }
+
+/* ERROR */
+.error-box {
+  display: none; flex-direction: column;
+  align-items: center; justify-content: center;
+  min-height: calc(100vh - 64px);
+  gap: 12px; padding: 24px; text-align: center;
+}
+.error-icon { font-size: 40px; }
+.error-text { color: var(--gray-500); font-size: 13px; max-width: 380px; line-height: 1.7; }
+
+/* MAIN */
+.main { display: none; padding: 24px; max-width: 1100px; margin: 0 auto; }
+.main.visible { display: block; }
+
+/* SECTION LABEL */
+.section-label {
+  font-size: 11px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.08em;
+  color: var(--gray-400); margin-bottom: 12px;
+  display: flex; align-items: center; gap: 8px;
+}
+.section-label::after { content: ''; flex: 1; height: 1px; background: var(--gray-200); }
+
+/* KPI GRID */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+  margin-bottom: 28px;
+}
+
+.kpi-card {
+  background: var(--white);
+  border-radius: var(--radius);
+  padding: 20px;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--gray-100);
+  transition: transform 0.2s, box-shadow 0.2s;
+  animation: fadeUp 0.4s ease both;
+  position: relative;
+  overflow: hidden;
+}
+.kpi-card:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
+
+.kpi-card::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 3px;
+  border-radius: 0 0 var(--radius) var(--radius);
+}
+.kpi-card.pink::after { background: var(--pink); }
+.kpi-card.green::after { background: var(--green); }
+.kpi-card.amber::after { background: var(--amber); }
+.kpi-card.blue::after { background: var(--blue); }
+.kpi-card.red::after { background: var(--red); }
+
+.kpi-icon {
+  width: 40px; height: 40px;
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px;
+  margin-bottom: 12px;
+}
+.kpi-card.pink .kpi-icon { background: var(--pink-pale2); }
+.kpi-card.green .kpi-icon { background: #D1FAE5; }
+.kpi-card.amber .kpi-icon { background: #FEF3C7; }
+.kpi-card.blue .kpi-icon { background: #DBEAFE; }
+.kpi-card.red .kpi-icon { background: #FEE2E2; }
+
+.kpi-label { font-size: 11px; color: var(--gray-400); font-weight: 500; margin-bottom: 6px; }
+.kpi-val { font-size: 36px; font-weight: 700; line-height: 1; letter-spacing: -1px; margin-bottom: 4px; }
+.kpi-card.pink .kpi-val { color: var(--pink); }
+.kpi-card.green .kpi-val { color: var(--green); }
+.kpi-card.amber .kpi-val { color: var(--amber); }
+.kpi-card.blue .kpi-val { color: var(--blue); }
+.kpi-card.red .kpi-val { color: var(--red); }
+.kpi-sub { font-size: 11px; color: var(--gray-400); }
+
+/* CHART GRID */
+.chart-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.chart-card {
+  background: var(--white);
+  border-radius: var(--radius);
+  padding: 20px;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--gray-100);
+  animation: fadeUp 0.5s ease both;
+}
+.chart-title { font-size: 13px; font-weight: 600; color: var(--gray-700); margin-bottom: 2px; }
+.chart-sub { font-size: 11px; color: var(--gray-400); margin-bottom: 16px; }
+.chart-wrap { position: relative; height: 190px; }
+
+/* RISK BARS */
+.risk-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+  margin-bottom: 28px;
+}
+
+.risk-card {
+  background: var(--white);
+  border-radius: var(--radius);
+  padding: 16px 18px;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--gray-100);
+  animation: fadeUp 0.55s ease both;
+}
+.rf-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.rf-label { font-size: 12px; font-weight: 500; color: var(--gray-700); }
+.rf-pct { font-size: 13px; font-weight: 700; }
+.rf-bar-wrap { height: 8px; background: var(--gray-100); border-radius: 4px; overflow: hidden; margin-bottom: 6px; }
+.rf-bar { height: 100%; border-radius: 4px; transition: width 1.2s cubic-bezier(0.34,1.56,0.64,1); }
+.rf-count { font-size: 11px; color: var(--gray-400); }
+
+/* FOOTER */
+.footer {
+  text-align: center;
+  padding: 20px;
+  font-size: 11px;
+  color: var(--gray-400);
+  border-top: 1px solid var(--gray-200);
+  background: var(--white);
+  margin-top: 8px;
+}
+
+/* LIVE DOT */
+.live-bar {
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  border-radius: 10px;
+  padding: 8px 14px;
+  font-size: 11px;
+  color: var(--gray-400);
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: var(--shadow-sm);
+}
+.dot-live {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 6px var(--green);
+  flex-shrink: 0;
+  animation: pulse 2s ease infinite;
+}
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.35} }
+
+/* CHART TOOLTIP OVERRIDE */
+.chart-filter {
+  display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px;
+}
+.filter-pill {
+  font-size: 11px; font-weight: 500;
+  padding: 4px 10px; border-radius: 99px;
+  border: 1px solid var(--gray-200);
+  background: var(--gray-50);
+  color: var(--gray-500);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.filter-pill.active {
+  background: var(--pink-pale2);
+  color: var(--pink);
+  border-color: var(--pink-pale3);
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* MOBILE */
+@media (max-width: 600px) {
+  .main { padding: 14px; }
+  .header { padding: 0 16px; }
+  .last-sync { display: none; }
+  .kpi-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .kpi-val { font-size: 28px; }
+  .kpi-icon { width: 34px; height: 34px; font-size: 15px; }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <div class="logo-wrap">
+      <img src="https://raw.githubusercontent.com/goonjourney/dashboard-sepsis/main/Sepsis-icon.png"
+           alt="Logo Sepsis"
+           onerror="this.style.display='none';this.parentElement.innerHTML='🩺'">
+    </div>
+    <div>
+      <div class="header-title">Survei Sepsis</div>
+      <div class="header-sub">Kawan Baik Indonesia</div>
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px;">
+    <span class="last-sync" id="lastSync"></span>
+    <button class="sync-btn" onclick="loadData()">
+      <span id="syncIcon">↻</span> Refresh
+    </button>
+  </div>
+</div>
+
+<div class="loading" id="loading">
+  <div class="spinner"></div>
+  <div class="loading-text">Memuat data survei...</div>
+</div>
+
+<div class="error-box" id="errorBox">
+  <div class="error-icon">⚠️</div>
+  <div class="error-text" id="errorText">Gagal memuat data.</div>
+  <button class="sync-btn" onclick="loadData()" style="background:var(--pink);border-color:var(--pink);margin-top:8px;">Coba lagi</button>
+</div>
+
+<div class="main" id="main">
+
+  <div class="live-bar">
+    <div class="dot-live"></div>
+    <span>Data live dari Google Sheets · Klik <strong>Refresh</strong> untuk memperbarui</span>
+  </div>
+
+  <!-- KPI -->
+  <div class="section-label">Ringkasan Survei</div>
+  <div class="kpi-grid">
+    <div class="kpi-card pink">
+      <div class="kpi-icon">📋</div>
+      <div class="kpi-label">TOTAL SURVEI</div>
+      <div class="kpi-val" id="kpiTotal">—</div>
+      <div class="kpi-sub">data masuk</div>
+    </div>
+    <div class="kpi-card red">
+      <div class="kpi-icon">🚨</div>
+      <div class="kpi-label">RISIKO TINGGI</div>
+      <div class="kpi-val" id="kpiTinggi">—</div>
+      <div class="kpi-sub" id="kpiTinggiSub">dari total</div>
+    </div>
+    <div class="kpi-card amber">
+      <div class="kpi-icon">⚠️</div>
+      <div class="kpi-label">RISIKO SEDANG</div>
+      <div class="kpi-val" id="kpiSedang">—</div>
+      <div class="kpi-sub" id="kpiSedangSub">dari total</div>
+    </div>
+    <div class="kpi-card green">
+      <div class="kpi-icon">✅</div>
+      <div class="kpi-label">RISIKO RENDAH</div>
+      <div class="kpi-val" id="kpiRendah">—</div>
+      <div class="kpi-sub" id="kpiRendahSub">dari total</div>
+    </div>
+    <div class="kpi-card pink">
+      <div class="kpi-icon">📅</div>
+      <div class="kpi-label">SURVEI HARI INI</div>
+      <div class="kpi-val" id="kpiHariIni">—</div>
+      <div class="kpi-sub" id="kpiHariIniSub">—</div>
+    </div>
+    <div class="kpi-card blue">
+      <div class="kpi-icon">💉</div>
+      <div class="kpi-label">IMUNISASI BELUM LENGKAP</div>
+      <div class="kpi-val" id="kpiImunisasi">—</div>
+      <div class="kpi-sub">dari yang punya balita</div>
+    </div>
+  </div>
+
+  <!-- DISTRIBUSI & SEBARAN -->
+  <div class="section-label">Distribusi & Sebaran</div>
+  <div class="chart-grid">
+    <div class="chart-card">
+      <div class="chart-title">Distribusi Kategori Risiko</div>
+      <div class="chart-sub">proporsi tingkat risiko sepsis</div>
+      <div class="chart-wrap"><canvas id="chartRisiko"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Survei per Dusun</div>
+      <div class="chart-sub">jumlah responden tiap dusun</div>
+      <div class="chart-wrap"><canvas id="chartDusun"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Tren Survei Harian</div>
+      <div class="chart-sub">jumlah survei masuk per hari</div>
+      <div class="chart-wrap"><canvas id="chartTren"></canvas></div>
+    </div>
+  </div>
+
+  <!-- FAKTOR RISIKO -->
+  <div class="section-label">Faktor Risiko Utama</div>
+  <div class="risk-grid" id="riskGrid"></div>
+
+  <!-- AKSES LAYANAN -->
+  <div class="section-label">Akses Layanan & Kepercayaan</div>
+  <div class="chart-grid">
+    <div class="chart-card">
+      <div class="chart-title">Jarak ke Fasilitas Kesehatan</div>
+      <div class="chart-sub">waktu tempuh responden ke faskes</div>
+      <div class="chart-wrap"><canvas id="chartFaskes"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Kepercayaan terhadap Faskes</div>
+      <div class="chart-sub">tingkat kepercayaan warga (Q55)</div>
+      <div class="chart-wrap"><canvas id="chartPercaya"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Sumber Air Minum</div>
+      <div class="chart-sub">distribusi akses air bersih rumah tangga</div>
+      <div class="chart-wrap"><canvas id="chartAir"></canvas></div>
+    </div>
+  </div>
+
+</div>
+
+<div class="footer" id="footer" style="display:none;">
+  © Dashboard Survei Sepsis · Kawan Baik Indonesia
+</div>
+
+<script>
+const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSx2-t-U3dkZzZhV9s5QxeiBi-E45AHfX12Hhnj68Ih5tIzyuibGcn73NS_3jOmkEeHGzbUHNFDSaDo/pub?gid=1745137983&single=true&output=csv';
+
+let charts = {};
+
+const PINK_COLORS = ['#E91E8C','#F472B6','#F9A8D4','#FBCFE8','#FCE7F3'];
+const CHART_DEFAULTS = {
+  plugins: {
+    legend: { labels: { color: '#6B7280', font: { family: 'Plus Jakarta Sans', size: 11 }, boxWidth: 10, padding: 12 } },
+    tooltip: {
+      backgroundColor: '#fff',
+      titleColor: '#111827',
+      bodyColor: '#6B7280',
+      borderColor: '#E5E7EB',
+      borderWidth: 1,
+      padding: 10,
+    }
+  }
+};
+
+function hitungSkor(r) {
+  let s = 0;
+  if ((r.Q9_PenyakitKronis||'').toLowerCase().includes('ada')) s += 2;
+  if ((r.Q31_AdaKematian||'').toLowerCase().includes('ada') || (r.Q31_AdaKematian||'').toLowerCase().includes('meninggal')) s += 3;
+  if ((r.Q19_CTPS||'').toLowerCase() === 'tidak ada' || r.Q19_CTPS === '') s += 1;
+  if ((r.Q6_Imunisasi||'').toLowerCase().includes('belum') || (r.Q6_Imunisasi||'').toLowerCase().includes('sebagian')) s += 1;
+  if ((r.Q16_AirMinum||'').toLowerCase().includes('sungai') || (r.Q16_AirMinum||'').toLowerCase().includes('sumur gali')) s += 1;
+  if ((r.Q23_SakitBerat||'').toLowerCase() === 'ya') s += 2;
+  if ((r.Q34_LamaSebelumCari||'').toLowerCase().includes('3 hari') || (r.Q34_LamaSebelumCari||'').toLowerCase().includes('lebih')) s += 1;
+  if ((r.Q18_Toilet||'').toLowerCase().includes('tidak ada') || (r.Q18_Toilet||'').toLowerCase().includes('lubang')) s += 1;
+  if ((r.Q14_Rokok||'').toLowerCase().includes('ya')) s += 1;
+  return s;
+}
+
+function parseData(csv) {
+  const rows = Papa.parse(csv, { header: false }).data;
+  if (rows.length < 3) return [];
+  const KEY = {
+    0:'Timestamp',2:'NamaPetugas',3:'IDSurvey',4:'DusunArea',
+    7:'NamaLengkap',9:'JenisKelamin',11:'Umur',12:'Desa',13:'Dusun',
+    22:'Q6_Imunisasi',25:'Q9_PenyakitKronis',31:'Q14_Rokok',
+    41:'Q16_AirMinum',43:'Q18_Toilet',44:'Q19_CTPS',45:'Q20_JarakFaskes',
+    49:'Q23_SakitBerat',57:'Q31_AdaKematian',61:'Q34_LamaSebelumCari',
+    21:'Q5_JmlBalita',86:'Q55_KepercayaanFaskes'
+  };
+  return rows.slice(2).filter(r => r.some(c => c && c.trim())).map(row => {
+    const r = {};
+    for (const [i, k] of Object.entries(KEY)) r[k] = (row[i]||'').trim();
+    r.SkorRisiko = hitungSkor(r);
+    r.KategoriRisiko = r.SkorRisiko >= 6 ? 'Tinggi' : r.SkorRisiko >= 3 ? 'Sedang' : 'Rendah';
+    return r;
+  });
+}
+
+function makeChart(id, type, labels, datasets, extra = {}) {
+  if (charts[id]) charts[id].destroy();
+  const ctx = document.getElementById(id).getContext('2d');
+  const scalesConfig = (type === 'pie' || type === 'doughnut') ? {} : {
+    scales: {
+      x: { ticks: { color: '#9CA3AF', font: { family: 'Plus Jakarta Sans', size: 10 } }, grid: { color: '#F3F4F6' } },
+      y: { ticks: { color: '#9CA3AF', font: { family: 'Plus Jakarta Sans', size: 10 } }, grid: { color: '#F3F4F6' } }
+    }
+  };
+  charts[id] = new Chart(ctx, {
+    type,
+    data: { labels, datasets },
+    options: { responsive: true, maintainAspectRatio: false, ...CHART_DEFAULTS, ...scalesConfig, ...extra }
+  });
+}
+
+function countBy(arr, key) {
+  const c = {};
+  arr.forEach(r => { const v = r[key]||'Tidak diisi'; c[v] = (c[v]||0) + 1; });
+  return c;
+}
+
+function pct(n, total) { return total > 0 ? ((n/total)*100).toFixed(1)+'%' : '0%'; }
+
+function renderDashboard(data) {
+  const total = data.length;
+  const tinggi = data.filter(r => r.KategoriRisiko === 'Tinggi').length;
+  const sedang = data.filter(r => r.KategoriRisiko === 'Sedang').length;
+  const rendah = data.filter(r => r.KategoriRisiko === 'Rendah').length;
+
+  // KPI
+  document.getElementById('kpiTotal').textContent = total;
+  document.getElementById('kpiTinggi').textContent = tinggi;
+  document.getElementById('kpiTinggiSub').textContent = pct(tinggi,total) + ' dari total';
+  document.getElementById('kpiSedang').textContent = sedang;
+  document.getElementById('kpiSedangSub').textContent = pct(sedang,total) + ' dari total';
+  document.getElementById('kpiRendah').textContent = rendah;
+  document.getElementById('kpiRendahSub').textContent = pct(rendah,total) + ' dari total';
+
+  // Hari ini
+  const now = new Date();
+  const dd = String(now.getDate()).padStart(2,'0');
+  const mm = String(now.getMonth()+1).padStart(2,'0');
+  const yyyy = now.getFullYear();
+  const todayFmt = `${dd}/${mm}/${yyyy}`;
+  const hariIni = data.filter(r => r.Timestamp && r.Timestamp.startsWith(todayFmt)).length;
+  document.getElementById('kpiHariIni').textContent = hariIni;
+  document.getElementById('kpiHariIniSub').textContent = `${dd} ${['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'][now.getMonth()]} ${yyyy}`;
+
+  // Imunisasi
+  const punyaBalita = data.filter(r => r.Q5_JmlBalita && r.Q5_JmlBalita !== '0');
+  const belumImun = punyaBalita.filter(r => (r.Q6_Imunisasi||'').toLowerCase().match(/belum|sebagian/)).length;
+  document.getElementById('kpiImunisasi').textContent = belumImun;
+
+  // Last sync
+  document.getElementById('lastSync').textContent = `Sync ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+
+  // Chart Risiko (Doughnut)
+  makeChart('chartRisiko', 'doughnut',
+    ['Tinggi','Sedang','Rendah'],
+    [{ data:[tinggi,sedang,rendah],
+       backgroundColor:['#EF4444','#F59E0B','#10B981'],
+       borderColor:['#fff','#fff','#fff'], borderWidth:3 }],
+    { plugins: { ...CHART_DEFAULTS.plugins, legend: { position:'right', labels:{ color:'#6B7280', font:{family:'Plus Jakarta Sans',size:11}, boxWidth:10, padding:10 } } } }
+  );
+
+  // Chart Dusun (Bar horizontal)
+  const dusunC = countBy(data, 'DusunArea');
+  const dusunArr = Object.entries(dusunC).sort((a,b)=>b[1]-a[1]).slice(0,7);
+  makeChart('chartDusun', 'bar',
+    dusunArr.map(d => d[0]),
+    [{ label:'Survei', data:dusunArr.map(d=>d[1]),
+       backgroundColor: dusunArr.map((_,i) => `rgba(233,30,140,${0.85 - i*0.08})`),
+       borderRadius:6, borderSkipped:false }],
+    { indexAxis:'y', plugins:{...CHART_DEFAULTS.plugins, legend:{display:false}} }
+  );
+
+  // Chart Tren (Line)
+  const trenC = {};
+  data.forEach(r => {
+    if (!r.Timestamp) return;
+    const parts = r.Timestamp.split(' ')[0].split('/');
+    if (parts.length === 3) { const k = `${parts[0]}/${parts[1]}`; trenC[k] = (trenC[k]||0)+1; }
+  });
+  const trenArr = Object.entries(trenC).sort();
+  makeChart('chartTren', 'line',
+    trenArr.map(t=>t[0]),
+    [{ label:'Survei/hari', data:trenArr.map(t=>t[1]),
+       borderColor:'#E91E8C', backgroundColor:'rgba(233,30,140,0.08)',
+       fill:true, tension:0.4, pointBackgroundColor:'#E91E8C', pointRadius:4, pointHoverRadius:6 }]
+  );
+
+  // Faktor Risiko Bars
+  const factors = [
+    { label:'Penyakit Kronis (Q9)', count: data.filter(r=>(r.Q9_PenyakitKronis||'').toLowerCase().includes('ada')).length, color:'#EF4444' },
+    { label:'Rokok dalam Rumah (Q14)', count: data.filter(r=>(r.Q14_Rokok||'').toLowerCase().includes('ya')).length, color:'#F59E0B' },
+    { label:'Imunisasi Tidak Lengkap (Q6)', count: belumImun, color:'#F59E0B' },
+    { label:'Air Minum Tidak Aman (Q16)', count: data.filter(r=>(r.Q16_AirMinum||'').toLowerCase().match(/sungai|sumur gali/)).length, color:'#3B82F6' },
+    { label:'Tidak Ada Toilet Layak (Q18)', count: data.filter(r=>(r.Q18_Toilet||'').toLowerCase().match(/tidak ada|lubang/)).length, color:'#3B82F6' },
+    { label:'Pernah Sakit Berat (Q23)', count: data.filter(r=>(r.Q23_SakitBerat||'').toLowerCase()==='ya').length, color:'#E91E8C' },
+  ];
+  document.getElementById('riskGrid').innerHTML = factors.map(f => {
+    const p = total > 0 ? ((f.count/total)*100).toFixed(1) : 0;
+    return `<div class="risk-card">
+      <div class="rf-header">
+        <div class="rf-label">${f.label}</div>
+        <div class="rf-pct" style="color:${f.color}">${p}%</div>
+      </div>
+      <div class="rf-bar-wrap"><div class="rf-bar" style="width:${p}%;background:${f.color};"></div></div>
+      <div class="rf-count">${f.count} dari ${total} rumah tangga</div>
+    </div>`;
+  }).join('');
+
+  // Chart Faskes
+  const faskesC = countBy(data.filter(r=>r.Q20_JarakFaskes), 'Q20_JarakFaskes');
+  const faskesArr = Object.entries(faskesC).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  makeChart('chartFaskes','bar',
+    faskesArr.map(e=>e[0].length>16?e[0].slice(0,16)+'…':e[0]),
+    [{ label:'Responden', data:faskesArr.map(e=>e[1]),
+       backgroundColor:'rgba(233,30,140,0.75)', borderRadius:6, borderSkipped:false }],
+    { plugins:{...CHART_DEFAULTS.plugins,legend:{display:false}} }
+  );
+
+  // Chart Kepercayaan
+  const percC = countBy(data.filter(r=>r.Q55_KepercayaanFaskes),'Q55_KepercayaanFaskes');
+  const percArr = Object.entries(percC);
+  makeChart('chartPercaya','doughnut',
+    percArr.map(e=>e[0]),
+    [{ data:percArr.map(e=>e[1]),
+       backgroundColor:['#10B981','#3B82F6','#F59E0B','#EF4444','#E91E8C'],
+       borderColor:'#fff', borderWidth:3 }]
+  );
+
+  // Chart Air
+  const airC = countBy(data.filter(r=>r.Q16_AirMinum),'Q16_AirMinum');
+  const airArr = Object.entries(airC).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  makeChart('chartAir','bar',
+    airArr.map(e=>e[0].length>16?e[0].slice(0,16)+'…':e[0]),
+    [{ label:'Rumah tangga', data:airArr.map(e=>e[1]),
+       backgroundColor:'rgba(59,130,246,0.75)', borderRadius:6, borderSkipped:false }],
+    { plugins:{...CHART_DEFAULTS.plugins,legend:{display:false}} }
+  );
+
+  document.getElementById('footer').style.display = 'block';
+}
+
+async function loadData() {
+  document.getElementById('loading').style.display = 'flex';
+  document.getElementById('main').classList.remove('visible');
+  document.getElementById('errorBox').style.display = 'none';
+  document.getElementById('footer').style.display = 'none';
+  const si = document.getElementById('syncIcon');
+  si.style.display = 'inline-block';
+  si.style.animation = 'spin 0.75s linear infinite';
+
+  try {
+    const res = await fetch(CSV_URL + '&t=' + Date.now());
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const text = await res.text();
+    const data = parseData(text);
+    if (!data.length) throw new Error('Tidak ada data yang terbaca.');
+    renderDashboard(data);
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('main').classList.add('visible');
+  } catch(e) {
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('errorText').textContent = 'Gagal memuat: ' + e.message;
+    document.getElementById('errorBox').style.display = 'flex';
+  } finally {
+    si.style.animation = '';
+  }
+}
+
+loadData();
+</script>
+</body>
+</html>
