@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sumba Sepsis Study 2026</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root {
+  --pink:#E91E8C; --pink-light:#F472B6; --pink-pale:#FDF2F8;
+  --pink-pale2:#FCE7F3; --pink-pale3:#FBD5EC;
+  --white:#FFFFFF; --gray-50:#F9FAFB; --gray-100:#F3F4F6;
+  --gray-200:#E5E7EB; --gray-400:#9CA3AF; --gray-500:#6B7280;
+  --gray-700:#374151; --gray-900:#111827;
+  --green:#10B981; --amber:#F59E0B; --red:#EF4444; --blue:#3B82F6;
+  --shadow-sm:0 1px 3px rgba(233,30,140,0.06),0 1px 2px rgba(0,0,0,0.04);
+  --shadow:0 4px 16px rgba(233,30,140,0.08),0 2px 6px rgba(0,0,0,0.04);
+  --radius:16px; --font:'Plus Jakarta Sans',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--gray-50);color:var(--gray-900);font-family:var(--font);font-size:14px;min-height:100vh;}
+
+/* HEADER */
+.header{background:var(--pink);padding:0 24px;height:64px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 2px 16px rgba(233,30,140,0.25);}
+.header-left{display:flex;align-items:center;gap:12px;}
+.logo-wrap{width:36px;height:36px;border-radius:10px;background:white;display:flex;align-items:center;justify-content:center;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.12);flex-shrink:0;}
+.logo-wrap img{width:100%;height:100%;object-fit:contain;}
+.header-title{font-size:17px;font-weight:700;color:white;letter-spacing:-0.3px;line-height:1.2;}
+.header-sub{font-size:11px;color:rgba(255,255,255,0.7);margin-top:1px;}
+.header-right{display:flex;align-items:center;gap:8px;}
+
+/* LANG TOGGLE */
+.lang-toggle{display:flex;background:rgba(255,255,255,0.15);border-radius:8px;padding:3px;border:1px solid rgba(255,255,255,0.2);}
+.lang-btn{padding:5px 12px;border-radius:6px;border:none;background:transparent;color:rgba(255,255,255,0.7);font-size:12px;font-weight:600;cursor:pointer;font-family:var(--font);transition:all 0.2s;letter-spacing:0.03em;}
+.lang-btn.active{background:white;color:var(--pink);}
+
+.sync-btn{display:flex;align-items:center;gap:6px;background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.3);border-radius:8px;padding:7px 13px;color:white;font-size:12px;font-weight:500;cursor:pointer;font-family:var(--font);transition:all 0.2s;}
+.sync-btn:hover{background:rgba(255,255,255,0.3);}
+.last-sync{font-size:11px;color:rgba(255,255,255,0.65);}
+
+/* LOADING */
+.loading{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:calc(100vh - 64px);gap:16px;background:var(--pink-pale);}
+.spinner{width:40px;height:40px;border:3px solid var(--pink-pale3);border-top-color:var(--pink);border-radius:50%;animation:spin 0.75s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.loading-text{color:var(--pink);font-size:13px;font-weight:500;}
+
+/* ERROR */
+.error-box{display:none;flex-direction:column;align-items:center;justify-content:center;min-height:calc(100vh - 64px);gap:12px;padding:24px;text-align:center;}
+.error-text{color:var(--gray-500);font-size:13px;max-width:380px;line-height:1.7;}
+
+/* HERO BANNER */
+.hero{background:linear-gradient(135deg,var(--pink) 0%,#C2185B 100%);padding:32px 24px;color:white;position:relative;overflow:hidden;}
+.hero::before{content:'';position:absolute;top:-40px;right:-40px;width:200px;height:200px;background:rgba(255,255,255,0.06);border-radius:50%;}
+.hero::after{content:'';position:absolute;bottom:-60px;right:60px;width:140px;height:140px;background:rgba(255,255,255,0.04);border-radius:50%;}
+.hero-inner{max-width:1100px;margin:0 auto;position:relative;z-index:1;}
+.hero-tag{display:inline-block;background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.3);border-radius:99px;padding:4px 12px;font-size:11px;font-weight:600;letter-spacing:0.06em;margin-bottom:12px;}
+.hero-title{font-size:26px;font-weight:700;letter-spacing:-0.5px;margin-bottom:8px;line-height:1.3;}
+.hero-desc{font-size:13px;color:rgba(255,255,255,0.8);max-width:600px;line-height:1.7;margin-bottom:20px;}
+.hero-stats{display:flex;gap:24px;flex-wrap:wrap;}
+.hero-stat{text-align:center;}
+.hero-stat-val{font-size:22px;font-weight:700;line-height:1;}
+.hero-stat-label{font-size:11px;color:rgba(255,255,255,0.7);margin-top:3px;}
+
+/* MAIN */
+.main{display:none;padding:24px;max-width:1100px;margin:0 auto;}
+.main.visible{display:block;}
+
+.section-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--gray-400);margin-bottom:12px;display:flex;align-items:center;gap:8px;}
+.section-label::after{content:'';flex:1;height:1px;background:var(--gray-200);}
+
+/* KPI */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:28px;}
+.kpi-card{background:var(--white);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow-sm);border:1px solid var(--gray-100);transition:transform 0.2s,box-shadow 0.2s;animation:fadeUp 0.4s ease both;position:relative;overflow:hidden;}
+.kpi-card:hover{transform:translateY(-2px);box-shadow:var(--shadow);}
+.kpi-card::after{content:'';position:absolute;bottom:0;left:0;right:0;height:3px;border-radius:0 0 var(--radius) var(--radius);}
+.kpi-card.pink::after{background:var(--pink);}
+.kpi-card.green::after{background:var(--green);}
+.kpi-card.amber::after{background:var(--amber);}
+.kpi-card.blue::after{background:var(--blue);}
+.kpi-card.red::after{background:var(--red);}
+.kpi-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;margin-bottom:12px;}
+.kpi-card.pink .kpi-icon{background:var(--pink-pale2);}
+.kpi-card.green .kpi-icon{background:#D1FAE5;}
+.kpi-card.amber .kpi-icon{background:#FEF3C7;}
+.kpi-card.blue .kpi-icon{background:#DBEAFE;}
+.kpi-card.red .kpi-icon{background:#FEE2E2;}
+.kpi-label{font-size:10px;color:var(--gray-400);font-weight:600;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.04em;}
+.kpi-val{font-size:36px;font-weight:700;line-height:1;letter-spacing:-1px;margin-bottom:4px;}
+.kpi-card.pink .kpi-val{color:var(--pink);}
+.kpi-card.green .kpi-val{color:var(--green);}
+.kpi-card.amber .kpi-val{color:var(--amber);}
+.kpi-card.blue .kpi-val{color:var(--blue);}
+.kpi-card.red .kpi-val{color:var(--red);}
+.kpi-sub{font-size:11px;color:var(--gray-400);}
+
+/* CHART */
+.chart-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;margin-bottom:28px;}
+.chart-card{background:var(--white);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow-sm);border:1px solid var(--gray-100);animation:fadeUp 0.5s ease both;}
+.chart-title{font-size:13px;font-weight:600;color:var(--gray-700);margin-bottom:2px;}
+.chart-sub{font-size:11px;color:var(--gray-400);margin-bottom:16px;}
+.chart-wrap{position:relative;height:190px;}
+
+/* RISK */
+.risk-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin-bottom:28px;}
+.risk-card{background:var(--white);border-radius:var(--radius);padding:16px 18px;box-shadow:var(--shadow-sm);border:1px solid var(--gray-100);animation:fadeUp 0.55s ease both;}
+.rf-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.rf-label{font-size:12px;font-weight:500;color:var(--gray-700);}
+.rf-pct{font-size:13px;font-weight:700;}
+.rf-bar-wrap{height:8px;background:var(--gray-100);border-radius:4px;overflow:hidden;margin-bottom:6px;}
+.rf-bar{height:100%;border-radius:4px;transition:width 1.2s cubic-bezier(0.34,1.56,0.64,1);}
+.rf-count{font-size:11px;color:var(--gray-400);}
+
+/* INSIGHT BOX */
+.insight-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;margin-bottom:28px;}
+.insight-card{background:var(--white);border-radius:var(--radius);padding:18px;box-shadow:var(--shadow-sm);border:1px solid var(--gray-100);border-left:4px solid var(--pink);animation:fadeUp 0.5s ease both;}
+.insight-tag{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--pink);margin-bottom:8px;}
+.insight-text{font-size:13px;color:var(--gray-700);line-height:1.7;}
+
+/* LIVE BAR */
+.live-bar{background:var(--white);border:1px solid var(--gray-200);border-radius:10px;padding:8px 14px;font-size:11px;color:var(--gray-400);margin-bottom:20px;display:flex;align-items:center;gap:8px;box-shadow:var(--shadow-sm);}
+.dot-live{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);flex-shrink:0;animation:pulse 2s ease infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.35}}
+
+/* FOOTER */
+.footer{text-align:center;padding:20px;font-size:11px;color:var(--gray-400);border-top:1px solid var(--gray-200);background:var(--white);margin-top:8px;display:none;}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+@media(max-width:600px){
+  .main{padding:14px;}
+  .header{padding:0 14px;}
+  .last-sync{display:none;}
+  .kpi-grid{grid-template-columns:1fr 1fr;gap:10px;}
+  .kpi-val{font-size:28px;}
+  .hero{padding:24px 16px;}
+  .hero-title{font-size:20px;}
+  .hero-stats{gap:16px;}
+  .lang-btn{padding:5px 8px;font-size:11px;}
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <div class="logo-wrap">
+      <img src="https://raw.githubusercontent.com/goonjourney/dashboard-sepsis/main/Sepsis-icon.png"
+           alt="Logo" onerror="this.style.display='none';this.parentElement.textContent='🩺'">
+    </div>
+    <div>
+      <div class="header-title">Sumba Sepsis Study 2026</div>
+      <div class="header-sub">Kawan Baik Indonesia</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <span class="last-sync" id="lastSync"></span>
+    <div class="lang-toggle">
+      <button class="lang-btn active" onclick="setLang('id')" id="btnID">ID</button>
+      <button class="lang-btn" onclick="setLang('en')" id="btnEN">EN</button>
+    </div>
+    <button class="sync-btn" onclick="loadData()"><span id="syncIcon">↻</span> <span data-id="refresh" data-en="Refresh">Refresh</span></button>
+  </div>
+</div>
+
+<div class="loading" id="loading">
+  <div class="spinner"></div>
+  <div class="loading-text" data-id="Memuat data survei..." data-en="Loading survey data...">Memuat data survei...</div>
+</div>
+
+<div class="error-box" id="errorBox">
+  <div style="font-size:40px;">⚠️</div>
+  <div class="error-text" id="errorText">Gagal memuat data.</div>
+  <button class="sync-btn" onclick="loadData()" style="background:var(--pink);border-color:var(--pink);margin-top:8px;">
+    <span data-id="Coba lagi" data-en="Try again">Coba lagi</span>
+  </button>
+</div>
+
+<!-- HERO -->
+<div class="hero" id="heroSection" style="display:none;">
+  <div class="hero-inner">
+    <div class="hero-tag" data-id="Laporan Survei Komunitas" data-en="Community Health Survey Report">Laporan Survei Komunitas</div>
+    <div class="hero-title" data-id="Studi Risiko Sepsis Masyarakat Sumba 2026" data-en="Sumba Community Sepsis Risk Study 2026">Studi Risiko Sepsis Masyarakat Sumba 2026</div>
+    <div class="hero-desc" data-id="Survei lapangan ini mengukur tingkat risiko sepsis di tingkat rumah tangga, mencakup profil lingkungan, akses layanan kesehatan, dan tingkat kepercayaan masyarakat terhadap fasilitas kesehatan di wilayah Sumba, Nusa Tenggara Timur." data-en="This field survey measures household-level sepsis risk factors including environmental conditions, healthcare access, and community trust in health services across Sumba, East Nusa Tenggara, Indonesia.">
+      Survei lapangan ini mengukur tingkat risiko sepsis di tingkat rumah tangga, mencakup profil lingkungan, akses layanan kesehatan, dan tingkat kepercayaan masyarakat terhadap fasilitas kesehatan di wilayah Sumba, Nusa Tenggara Timur.
+    </div>
+    <div class="hero-stats">
+      <div class="hero-stat">
+        <div class="hero-stat-val" id="heroTotal">—</div>
+        <div class="hero-stat-label" data-id="Total Responden" data-en="Total Respondents">Total Responden</div>
+      </div>
+      <div class="hero-stat">
+        <div class="hero-stat-val" id="heroDusun">—</div>
+        <div class="hero-stat-label" data-id="Dusun Tercakup" data-en="Villages Covered">Dusun Tercakup</div>
+      </div>
+      <div class="hero-stat">
+        <div class="hero-stat-val" id="heroPetugas">—</div>
+        <div class="hero-stat-label" data-id="Petugas Lapangan" data-en="Field Officers">Petugas Lapangan</div>
+      </div>
+      <div class="hero-stat">
+        <div class="hero-stat-val" id="heroPeriode">—</div>
+        <div class="hero-stat-label" data-id="Periode Survei" data-en="Survey Period">Periode Survei</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="main" id="main">
+
+  <div class="live-bar">
+    <div class="dot-live"></div>
+    <span data-id="Data live dari Google Sheets · Klik Refresh untuk memperbarui" data-en="Live data from Google Sheets · Click Refresh to update">Data live dari Google Sheets · Klik Refresh untuk memperbarui</span>
+  </div>
+
+  <!-- KPI -->
+  <div class="section-label" data-id="Ringkasan Survei" data-en="Survey Summary">Ringkasan Survei</div>
+  <div class="kpi-grid">
+    <div class="kpi-card pink">
+      <div class="kpi-icon">📋</div>
+      <div class="kpi-label" data-id="TOTAL SURVEI" data-en="TOTAL SURVEYS">TOTAL SURVEI</div>
+      <div class="kpi-val" id="kpiTotal">—</div>
+      <div class="kpi-sub" data-id="data masuk" data-en="records collected">data masuk</div>
+    </div>
+    <div class="kpi-card red">
+      <div class="kpi-icon">🚨</div>
+      <div class="kpi-label" data-id="RISIKO TINGGI" data-en="HIGH RISK">RISIKO TINGGI</div>
+      <div class="kpi-val" id="kpiTinggi">—</div>
+      <div class="kpi-sub" id="kpiTinggiSub">—</div>
+    </div>
+    <div class="kpi-card amber">
+      <div class="kpi-icon">⚠️</div>
+      <div class="kpi-label" data-id="RISIKO SEDANG" data-en="MODERATE RISK">RISIKO SEDANG</div>
+      <div class="kpi-val" id="kpiSedang">—</div>
+      <div class="kpi-sub" id="kpiSedangSub">—</div>
+    </div>
+    <div class="kpi-card green">
+      <div class="kpi-icon">✅</div>
+      <div class="kpi-label" data-id="RISIKO RENDAH" data-en="LOW RISK">RISIKO RENDAH</div>
+      <div class="kpi-val" id="kpiRendah">—</div>
+      <div class="kpi-sub" id="kpiRendahSub">—</div>
+    </div>
+    <div class="kpi-card pink">
+      <div class="kpi-icon">📅</div>
+      <div class="kpi-label" data-id="SURVEI HARI INI" data-en="TODAY'S SURVEYS">SURVEI HARI INI</div>
+      <div class="kpi-val" id="kpiHariIni">—</div>
+      <div class="kpi-sub" id="kpiHariIniSub">—</div>
+    </div>
+    <div class="kpi-card blue">
+      <div class="kpi-icon">💉</div>
+      <div class="kpi-label" data-id="IMUNISASI BELUM LENGKAP" data-en="INCOMPLETE IMMUNIZATION">IMUNISASI BELUM LENGKAP</div>
+      <div class="kpi-val" id="kpiImunisasi">—</div>
+      <div class="kpi-sub" data-id="dari yang punya balita" data-en="of households with children under 5">dari yang punya balita</div>
+    </div>
+  </div>
+
+  <!-- DISTRIBUSI -->
+  <div class="section-label" data-id="Distribusi & Sebaran" data-en="Distribution & Coverage">Distribusi & Sebaran</div>
+  <div class="chart-grid">
+    <div class="chart-card">
+      <div class="chart-title" data-id="Distribusi Kategori Risiko" data-en="Risk Category Distribution">Distribusi Kategori Risiko</div>
+      <div class="chart-sub" data-id="proporsi tingkat risiko sepsis per rumah tangga" data-en="proportion of sepsis risk level per household">proporsi tingkat risiko sepsis per rumah tangga</div>
+      <div class="chart-wrap"><canvas id="chartRisiko"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title" data-id="Survei per Dusun" data-en="Surveys by Village">Survei per Dusun</div>
+      <div class="chart-sub" data-id="jumlah responden tiap dusun" data-en="number of respondents per village">jumlah responden tiap dusun</div>
+      <div class="chart-wrap"><canvas id="chartDusun"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title" data-id="Tren Survei Harian" data-en="Daily Survey Trend">Tren Survei Harian</div>
+      <div class="chart-sub" data-id="jumlah survei masuk per hari" data-en="number of surveys collected per day">jumlah survei masuk per hari</div>
+      <div class="chart-wrap"><canvas id="chartTren"></canvas></div>
+    </div>
+  </div>
+
+  <!-- FAKTOR RISIKO -->
+  <div class="section-label" data-id="Faktor Risiko Utama" data-en="Key Risk Factors">Faktor Risiko Utama</div>
+  <div class="risk-grid" id="riskGrid"></div>
+
+  <!-- KEY INSIGHTS -->
+  <div class="section-label" data-id="Temuan Kunci" data-en="Key Findings">Temuan Kunci</div>
+  <div class="insight-grid" id="insightGrid"></div>
+
+  <!-- AKSES LAYANAN -->
+  <div class="section-label" data-id="Akses Layanan & Kepercayaan" data-en="Healthcare Access & Trust">Akses Layanan & Kepercayaan</div>
+  <div class="chart-grid">
+    <div class="chart-card">
+      <div class="chart-title" data-id="Jarak ke Fasilitas Kesehatan" data-en="Distance to Health Facility">Jarak ke Fasilitas Kesehatan</div>
+      <div class="chart-sub" data-id="waktu tempuh responden ke faskes terdekat" data-en="travel time to nearest health facility">waktu tempuh responden ke faskes terdekat</div>
+      <div class="chart-wrap"><canvas id="chartFaskes"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title" data-id="Kepercayaan terhadap Faskes" data-en="Trust in Health Facilities">Kepercayaan terhadap Faskes</div>
+      <div class="chart-sub" data-id="tingkat kepercayaan warga terhadap puskesmas/RS" data-en="community trust level toward clinics/hospitals">tingkat kepercayaan warga terhadap puskesmas/RS</div>
+      <div class="chart-wrap"><canvas id="chartPercaya"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title" data-id="Sumber Air Minum" data-en="Drinking Water Source">Sumber Air Minum</div>
+      <div class="chart-sub" data-id="distribusi akses air bersih rumah tangga" data-en="household access to clean water sources">distribusi akses air bersih rumah tangga</div>
+      <div class="chart-wrap"><canvas id="chartAir"></canvas></div>
+    </div>
+  </div>
+
+</div>
+
+<div class="footer" id="footer">
+  © Sumba Sepsis Study 2026 · Kawan Baik Indonesia
+</div>
+
+<script>
+const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSx2-t-U3dkZzZhV9s5QxeiBi-E45AHfX12Hhnj68Ih5tIzyuibGcn73NS_3jOmkEeHGzbUHNFDSaDo/pub?gid=1745137983&single=true&output=csv';
+
+let currentLang = 'id';
+let charts = {};
+let cachedData = null;
+
+// ── TRANSLATIONS ──────────────────────────────────────────
+const T = {
+  id: {
+    ofTotal: 'dari total survei',
+    todayLabel: n => `${n} hari ini`,
+    riskFactors: [
+      'Penyakit Kronis (Q9)',
+      'Rokok dalam Rumah (Q14)',
+      'Imunisasi Tidak Lengkap (Q6)',
+      'Air Minum Tidak Aman (Q16)',
+      'Tidak Ada Toilet Layak (Q18)',
+      'Pernah Sakit Berat (Q23)',
+    ],
+    rfCount: (n, total) => `${n} dari ${total} rumah tangga`,
+    riskLabels: ['Tinggi','Sedang','Rendah'],
+    surveysLabel: 'Survei',
+    hhLabel: 'Rumah tangga',
+    respLabel: 'Responden',
+    insightTag: 'Temuan',
+    insights: (d) => buildInsights(d, 'id'),
+    chartDusunLabel: 'Survei',
+    noDataNote: 'Data belum tersedia',
+  },
+  en: {
+    ofTotal: 'of total surveys',
+    todayLabel: n => `${n} today`,
+    riskFactors: [
+      'Chronic Illness (Q9)',
+      'Smoking Inside Home (Q14)',
+      'Incomplete Immunization (Q6)',
+      'Unsafe Drinking Water (Q16)',
+      'No Proper Toilet (Q18)',
+      'Recent Severe Illness (Q23)',
+    ],
+    rfCount: (n, total) => `${n} of ${total} households`,
+    riskLabels: ['High','Moderate','Low'],
+    surveysLabel: 'Surveys',
+    hhLabel: 'Households',
+    respLabel: 'Respondents',
+    insightTag: 'Finding',
+    insights: (d) => buildInsights(d, 'en'),
+    chartDusunLabel: 'Surveys',
+    noDataNote: 'No data available yet',
+  }
+};
+
+function buildInsights(data, lang) {
+  const total = data.length;
+  const tinggi = data.filter(r => r.KategoriRisiko === 'Tinggi').length;
+  const kronis = data.filter(r => (r.Q9_PenyakitKronis||'').toLowerCase().includes('ada')).length;
+  const rokok = data.filter(r => (r.Q14_Rokok||'').toLowerCase().includes('ya')).length;
+  const kematian = data.filter(r => (r.Q31_AdaKematian||'').toLowerCase().match(/ada|meninggal/)).length;
+  const p = n => total > 0 ? ((n/total)*100).toFixed(1)+'%' : '0%';
+
+  if (lang === 'id') return [
+    { tag: 'Risiko Kritis', text: `${p(tinggi)} (${tinggi} dari ${total}) rumah tangga masuk kategori risiko tinggi sepsis dan memerlukan tindak lanjut segera.` },
+    { tag: 'Penyakit Kronis', text: `${p(kronis)} responden memiliki anggota keluarga dengan penyakit kronis — faktor yang meningkatkan kerentanan terhadap infeksi berat.` },
+    { tag: 'Perilaku Merokok', text: `${p(rokok)} rumah tangga melaporkan kebiasaan merokok di dalam rumah, meningkatkan risiko infeksi saluran napas pada anak.` },
+    { tag: 'Kematian Terkait Infeksi', text: `${kematian} rumah tangga (${p(kematian)}) melaporkan kematian anggota keluarga yang berkaitan dengan penyakit infeksi dalam 12 bulan terakhir.` },
+  ];
+  else return [
+    { tag: 'Critical Risk', text: `${p(tinggi)} (${tinggi} of ${total}) households fall into the high sepsis risk category and require immediate follow-up intervention.` },
+    { tag: 'Chronic Illness Burden', text: `${p(kronis)} of respondents have household members with chronic disease — a key vulnerability factor for severe infection.` },
+    { tag: 'Indoor Smoking', text: `${p(rokok)} of households reported indoor smoking practices, significantly increasing children's risk of respiratory infection.` },
+    { tag: 'Infection-Related Deaths', text: `${kematian} households (${p(kematian)}) reported a family member death associated with infection or illness in the past 12 months.` },
+  ];
+}
+
+// ── LANGUAGE SWITCH ───────────────────────────────────────
+function setLang(lang) {
+  currentLang = lang;
+  document.getElementById('btnID').classList.toggle('active', lang === 'id');
+  document.getElementById('btnEN').classList.toggle('active', lang === 'en');
+
+  // Update all data-id / data-en elements
+  document.querySelectorAll('[data-id]').forEach(el => {
+    el.textContent = lang === 'id' ? el.dataset.id : el.dataset.en;
+  });
+
+  // Re-render dynamic parts if data is loaded
+  if (cachedData) {
+    renderDynamic(cachedData);
+  }
+}
+
+// ── CHART HELPERS ─────────────────────────────────────────
+const TOOLTIP = {
+  backgroundColor:'#fff', titleColor:'#111827', bodyColor:'#6B7280',
+  borderColor:'#E5E7EB', borderWidth:1, padding:10,
+};
+const LEGEND = (pos='top') => ({
+  position: pos,
+  labels: { color:'#6B7280', font:{ family:'Plus Jakarta Sans', size:11 }, boxWidth:10, padding:10 }
+});
+
+function makeChart(id, type, labels, datasets, extra={}) {
+  if (charts[id]) charts[id].destroy();
+  const ctx = document.getElementById(id).getContext('2d');
+  const isPie = type === 'pie' || type === 'doughnut';
+  charts[id] = new Chart(ctx, {
+    type,
+    data: { labels, datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: LEGEND(isPie ? 'right' : 'top'), tooltip: TOOLTIP },
+      ...(isPie ? {} : {
+        scales: {
+          x: { ticks:{ color:'#9CA3AF', font:{family:'Plus Jakarta Sans',size:10} }, grid:{color:'#F3F4F6'} },
+          y: { ticks:{ color:'#9CA3AF', font:{family:'Plus Jakarta Sans',size:10} }, grid:{color:'#F3F4F6'} }
+        }
+      }),
+      ...extra
+    }
+  });
+}
+
+function countBy(arr, key) {
+  const c={};
+  arr.forEach(r=>{ const v=r[key]||'—'; c[v]=(c[v]||0)+1; });
+  return c;
+}
+
+// ── SCORE ─────────────────────────────────────────────────
+function hitungSkor(r) {
+  let s=0;
+  if((r.Q9_PenyakitKronis||'').toLowerCase().includes('ada')) s+=2;
+  if((r.Q31_AdaKematian||'').toLowerCase().match(/ada|meninggal/)) s+=3;
+  if((r.Q19_CTPS||'').toLowerCase()==='tidak ada'||(r.Q19_CTPS||'')==='') s+=1;
+  if((r.Q6_Imunisasi||'').toLowerCase().match(/belum|sebagian/)) s+=1;
+  if((r.Q16_AirMinum||'').toLowerCase().match(/sungai|sumur gali/)) s+=1;
+  if((r.Q23_SakitBerat||'').toLowerCase()==='ya') s+=2;
+  if((r.Q34_LamaSebelumCari||'').toLowerCase().match(/3 hari|lebih/)) s+=1;
+  if((r.Q18_Toilet||'').toLowerCase().match(/tidak ada|lubang/)) s+=1;
+  if((r.Q14_Rokok||'').toLowerCase().includes('ya')) s+=1;
+  return s;
+}
+
+// ── PARSE ─────────────────────────────────────────────────
+function parseData(csv) {
+  const rows = Papa.parse(csv,{header:false}).data;
+  if(rows.length<3) return [];
+  const KEY={
+    0:'Timestamp',2:'NamaPetugas',4:'DusunArea',
+    7:'NamaLengkap',9:'JenisKelamin',11:'Umur',12:'Desa',13:'Dusun',
+    21:'Q5_JmlBalita',22:'Q6_Imunisasi',25:'Q9_PenyakitKronis',
+    31:'Q14_Rokok',41:'Q16_AirMinum',43:'Q18_Toilet',44:'Q19_CTPS',
+    45:'Q20_JarakFaskes',49:'Q23_SakitBerat',57:'Q31_AdaKematian',
+    61:'Q34_LamaSebelumCari',86:'Q55_KepercayaanFaskes'
+  };
+  return rows.slice(2).filter(r=>r.some(c=>c&&c.trim())).map(row=>{
+    const r={};
+    for(const [i,k] of Object.entries(KEY)) r[k]=(row[i]||'').trim();
+    r.SkorRisiko=hitungSkor(r);
+    r.KategoriRisiko=r.SkorRisiko>=6?'Tinggi':r.SkorRisiko>=3?'Sedang':'Rendah';
+    return r;
+  });
+}
+
+// ── RENDER STATIC (run once) ──────────────────────────────
+function renderStatic(data) {
+  const total = data.length;
+  const dusunSet = new Set(data.map(r=>r.DusunArea||r.Dusun).filter(Boolean));
+  const petugasSet = new Set(data.map(r=>r.NamaPetugas).filter(Boolean));
+
+  // Hero stats
+  document.getElementById('heroTotal').textContent = total;
+  document.getElementById('heroDusun').textContent = dusunSet.size;
+  document.getElementById('heroPetugas').textContent = petugasSet.size;
+
+  // Periode
+  const dates = data.map(r=>r.Timestamp).filter(Boolean).sort();
+  if(dates.length) {
+    const first = dates[0].split(' ')[0];
+    const last = dates[dates.length-1].split(' ')[0];
+    document.getElementById('heroPeriode').textContent = first===last ? first : first+' – '+last;
+  }
+
+  document.getElementById('heroSection').style.display='block';
+}
+
+// ── RENDER DYNAMIC (re-runs on lang change) ───────────────
+function renderDynamic(data) {
+  const L = T[currentLang];
+  const total = data.length;
+  const tinggi = data.filter(r=>r.KategoriRisiko==='Tinggi').length;
+  const sedang = data.filter(r=>r.KategoriRisiko==='Sedang').length;
+  const rendah = data.filter(r=>r.KategoriRisiko==='Rendah').length;
+  const p = n => total>0 ? ((n/total)*100).toFixed(1)+'%' : '0%';
+
+  // KPI
+  document.getElementById('kpiTotal').textContent=total;
+  document.getElementById('kpiTinggi').textContent=tinggi;
+  document.getElementById('kpiTinggiSub').textContent=p(tinggi)+' '+L.ofTotal;
+  document.getElementById('kpiSedang').textContent=sedang;
+  document.getElementById('kpiSedangSub').textContent=p(sedang)+' '+L.ofTotal;
+  document.getElementById('kpiRendah').textContent=rendah;
+  document.getElementById('kpiRendahSub').textContent=p(rendah)+' '+L.ofTotal;
+
+  const now=new Date();
+  const dd=String(now.getDate()).padStart(2,'0');
+  const mm=String(now.getMonth()+1).padStart(2,'0');
+  const yyyy=now.getFullYear();
+  const todayFmt=`${dd}/${mm}/${yyyy}`;
+  const hariIni=data.filter(r=>r.Timestamp&&r.Timestamp.startsWith(todayFmt)).length;
+  document.getElementById('kpiHariIni').textContent=hariIni;
+  document.getElementById('kpiHariIniSub').textContent=`${dd} ${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][now.getMonth()]} ${yyyy}`;
+
+  const punyaBalita=data.filter(r=>r.Q5_JmlBalita&&r.Q5_JmlBalita!=='0');
+  const belumImun=punyaBalita.filter(r=>(r.Q6_Imunisasi||'').toLowerCase().match(/belum|sebagian/)).length;
+  document.getElementById('kpiImunisasi').textContent=belumImun;
+
+  // Chart Risiko
+  makeChart('chartRisiko','doughnut',
+    L.riskLabels,
+    [{data:[tinggi,sedang,rendah],backgroundColor:['#EF4444','#F59E0B','#10B981'],borderColor:'#fff',borderWidth:3}],
+    {plugins:{legend:LEGEND('right'),tooltip:TOOLTIP}}
+  );
+
+  // Chart Dusun
+  const dusunC=countBy(data,'DusunArea');
+  const dusunArr=Object.entries(dusunC).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  makeChart('chartDusun','bar',
+    dusunArr.map(d=>d[0]),
+    [{label:L.chartDusunLabel,data:dusunArr.map(d=>d[1]),
+      backgroundColor:dusunArr.map((_,i)=>`rgba(233,30,140,${0.85-i*0.07})`),
+      borderRadius:6,borderSkipped:false}],
+    {indexAxis:'y',plugins:{legend:{display:false},tooltip:TOOLTIP}}
+  );
+
+  // Chart Tren
+  const trenC={};
+  data.forEach(r=>{
+    if(!r.Timestamp) return;
+    const parts=r.Timestamp.split(' ')[0].split('/');
+    if(parts.length===3){const k=`${parts[0]}/${parts[1]}`;trenC[k]=(trenC[k]||0)+1;}
+  });
+  const trenArr=Object.entries(trenC).sort();
+  makeChart('chartTren','line',
+    trenArr.map(t=>t[0]),
+    [{label:L.surveysLabel,data:trenArr.map(t=>t[1]),
+      borderColor:'#E91E8C',backgroundColor:'rgba(233,30,140,0.08)',
+      fill:true,tension:0.4,pointBackgroundColor:'#E91E8C',pointRadius:4,pointHoverRadius:6}]
+  );
+
+  // Risk Factors
+  const factors=[
+    {count:data.filter(r=>(r.Q9_PenyakitKronis||'').toLowerCase().includes('ada')).length,color:'#EF4444'},
+    {count:data.filter(r=>(r.Q14_Rokok||'').toLowerCase().includes('ya')).length,color:'#F59E0B'},
+    {count:belumImun,color:'#F59E0B'},
+    {count:data.filter(r=>(r.Q16_AirMinum||'').toLowerCase().match(/sungai|sumur gali/)).length,color:'#3B82F6'},
+    {count:data.filter(r=>(r.Q18_Toilet||'').toLowerCase().match(/tidak ada|lubang/)).length,color:'#3B82F6'},
+    {count:data.filter(r=>(r.Q23_SakitBerat||'').toLowerCase()==='ya').length,color:'#E91E8C'},
+  ];
+  document.getElementById('riskGrid').innerHTML=factors.map((f,i)=>{
+    const pv=total>0?((f.count/total)*100).toFixed(1):0;
+    return `<div class="risk-card">
+      <div class="rf-header">
+        <div class="rf-label">${L.riskFactors[i]}</div>
+        <div class="rf-pct" style="color:${f.color}">${pv}%</div>
+      </div>
+      <div class="rf-bar-wrap"><div class="rf-bar" style="width:${pv}%;background:${f.color};"></div></div>
+      <div class="rf-count">${L.rfCount(f.count,total)}</div>
+    </div>`;
+  }).join('');
+
+  // Insights
+  const insights=L.insights(data);
+  document.getElementById('insightGrid').innerHTML=insights.map(ins=>`
+    <div class="insight-card">
+      <div class="insight-tag">${ins.tag}</div>
+      <div class="insight-text">${ins.text}</div>
+    </div>
+  `).join('');
+
+  // Chart Faskes
+  const faskesC=countBy(data.filter(r=>r.Q20_JarakFaskes),'Q20_JarakFaskes');
+  const faskesArr=Object.entries(faskesC).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  makeChart('chartFaskes','bar',
+    faskesArr.map(e=>e[0].length>18?e[0].slice(0,18)+'…':e[0]),
+    [{label:L.respLabel,data:faskesArr.map(e=>e[1]),
+      backgroundColor:'rgba(233,30,140,0.75)',borderRadius:6,borderSkipped:false}],
+    {plugins:{legend:{display:false},tooltip:TOOLTIP}}
+  );
+
+  // Chart Kepercayaan
+  const percC=countBy(data.filter(r=>r.Q55_KepercayaanFaskes),'Q55_KepercayaanFaskes');
+  const percArr=Object.entries(percC);
+  makeChart('chartPercaya','doughnut',
+    percArr.map(e=>e[0]),
+    [{data:percArr.map(e=>e[1]),
+      backgroundColor:['#10B981','#3B82F6','#F59E0B','#EF4444','#E91E8C'],
+      borderColor:'#fff',borderWidth:3}],
+    {plugins:{legend:LEGEND('right'),tooltip:TOOLTIP}}
+  );
+
+  // Chart Air
+  const airC=countBy(data.filter(r=>r.Q16_AirMinum),'Q16_AirMinum');
+  const airArr=Object.entries(airC).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  makeChart('chartAir','bar',
+    airArr.map(e=>e[0].length>18?e[0].slice(0,18)+'…':e[0]),
+    [{label:L.hhLabel,data:airArr.map(e=>e[1]),
+      backgroundColor:'rgba(59,130,246,0.75)',borderRadius:6,borderSkipped:false}],
+    {plugins:{legend:{display:false},tooltip:TOOLTIP}}
+  );
+}
+
+// ── LOAD ──────────────────────────────────────────────────
+async function loadData() {
+  document.getElementById('loading').style.display='flex';
+  document.getElementById('main').classList.remove('visible');
+  document.getElementById('errorBox').style.display='none';
+  document.getElementById('heroSection').style.display='none';
+  document.getElementById('footer').style.display='none';
+  const si=document.getElementById('syncIcon');
+  si.style.animation='spin 0.75s linear infinite';
+
+  try {
+    const res=await fetch(CSV_URL+'&t='+Date.now());
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const text=await res.text();
+    const data=parseData(text);
+    if(!data.length) throw new Error(currentLang==='id'?'Tidak ada data yang terbaca.':'No data could be read.');
+    cachedData=data;
+
+    const now=new Date();
+    document.getElementById('lastSync').textContent=
+      `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+
+    renderStatic(data);
+    renderDynamic(data);
+
+    document.getElementById('loading').style.display='none';
+    document.getElementById('main').classList.add('visible');
+    document.getElementById('footer').style.display='block';
+  } catch(e) {
+    document.getElementById('loading').style.display='none';
+    document.getElementById('errorText').textContent=
+      (currentLang==='id'?'Gagal memuat data: ':'Failed to load data: ')+e.message;
+    document.getElementById('errorBox').style.display='flex';
+  } finally {
+    si.style.animation='';
+  }
+}
+
+loadData();
+</script>
+</body>
+</html>
